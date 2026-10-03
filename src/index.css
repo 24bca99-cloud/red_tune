@@ -1608,6 +1608,135 @@ html, body {
   box-shadow: 0 0 12px var(--red-glow);
 }
 
+/* Search History Row */
+.search-history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  font-size: 0.8rem;
+  overflow: hidden;
+}
+.search-history-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+.search-history-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.search-history-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+.search-history-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+.search-history-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.search-history-clear-btn:hover {
+  color: var(--primary-red);
+}
+
+/* Artist Match Quick Highlight Card */
+.search-artist-quick-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: linear-gradient(135deg, rgba(23, 23, 23, 0.95), rgba(35, 8, 12, 0.8));
+  border: 1px solid var(--border-red);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+}
+.search-artist-quick-card:hover {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(50, 10, 16, 0.9));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px var(--red-glow-subtle);
+}
+.artist-quick-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--primary-red);
+}
+.artist-quick-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.artist-quick-info {
+  flex: 1;
+  min-width: 0;
+}
+.artist-quick-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--primary-red);
+  letter-spacing: 1px;
+}
+.artist-quick-name {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0.1rem 0;
+}
+.artist-quick-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.artist-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(229, 9, 47, 0.15);
+  border: 1px solid var(--border-red);
+  color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.artist-quick-btn:hover {
+  background: var(--primary-red);
+}
+
 .search-demo-notice {
   display: flex;
   align-items: center;
@@ -5492,21 +5621,38 @@ html, body, #root, .redtune-app-root {
     padding: 0.6rem 0.5rem !important;
   }
 
-  .col-album, .col-time, .col-date, .row-col-album, .row-col-timeago, .row-duration {
+  .col-album, .col-time, .col-date, .row-col-album, .row-col-timeago, .row-col-duration, .row-duration {
     display: none !important;
+  }
+
+  .row-col-track {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .row-titles {
+    min-width: 0 !important;
+    overflow: hidden !important;
   }
 
   .row-thumb {
     width: 40px !important;
     height: 40px !important;
+    flex-shrink: 0 !important;
   }
 
   .row-title {
     font-size: 0.88rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .row-artist {
     font-size: 0.74rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   /* Artist & Playlist Detail Hero Banners */
@@ -5540,26 +5686,125 @@ html, body, #root, .redtune-app-root {
   }
 
   /* Search Page responsive layout */
-  .search-input-wrapper {
+  .redtune-page-search {
+    width: 100% !important;
     max-width: 100% !important;
+    overflow-x: hidden !important;
   }
 
-  .search-input {
+  .search-header-stage {
+    margin-bottom: 1rem !important;
+    width: 100% !important;
+  }
+
+  .search-bar-primary {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0.65rem 1rem !important;
+    gap: 0.6rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .search-input-main {
     font-size: 0.95rem !important;
-    padding: 0.75rem 2.8rem 0.75rem 2.6rem !important;
+    width: 100% !important;
   }
 
   .search-presets-scroll {
     overflow-x: auto !important;
-    padding-bottom: 0.5rem !important;
+    padding-bottom: 0.4rem !important;
+    margin-top: 0.65rem !important;
+    gap: 0.45rem !important;
     -webkit-overflow-scrolling: touch;
   }
 
-  .search-view-mode-bar {
+  .search-preset-pill {
+    padding: 0.35rem 0.8rem !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+  }
+
+  .search-history-row {
+    margin-top: 0.5rem !important;
+    gap: 0.45rem !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .search-history-label {
+    font-size: 0.72rem !important;
+  }
+
+  .search-history-scroll {
+    gap: 0.35rem !important;
+    padding-bottom: 2px !important;
+  }
+
+  .search-history-pill {
+    padding: 0.2rem 0.55rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .search-artist-quick-card {
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.75rem !important;
+    margin: 0.85rem 0 1rem 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .artist-quick-avatar {
+    width: 48px !important;
+    height: 48px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .artist-quick-name {
+    font-size: 0.98rem !important;
+  }
+
+  .artist-quick-hint {
+    font-size: 0.72rem !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .artist-quick-btn {
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .search-results-header {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    margin-bottom: 1rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .search-results-title {
+    font-size: 1.05rem !important;
+  }
+
+  .results-count-badge {
+    font-size: 0.72rem !important;
+  }
+
+  .search-results-grid,
+  .search-loading-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .search-results-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.35rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   /* Now Playing Overlay (Full Screen Mobile Sheet) */
@@ -5696,6 +5941,24 @@ html, body, #root, .redtune-app-root {
     gap: 0.65rem !important;
   }
 
+  .search-results-grid,
+  .search-loading-grid {
+    gap: 0.65rem !important;
+  }
+
+  .artist-quick-btn span {
+    display: none !important;
+  }
+
+  .artist-quick-avatar {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .search-results-title {
+    font-size: 0.95rem !important;
+  }
+
   .redtune-song-card {
     padding: 0.5rem !important;
   }
@@ -5750,6 +6013,24 @@ html, body, #root, .redtune-app-root {
 
   .cards-horizontal-grid {
     gap: 0.5rem !important;
+  }
+
+  .search-results-grid,
+  .search-loading-grid {
+    gap: 0.5rem !important;
+  }
+
+  .search-preset-pill {
+    padding: 0.28rem 0.55rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .search-bar-primary {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .search-input-main {
+    font-size: 0.88rem !important;
   }
 
   .redtune-song-card {

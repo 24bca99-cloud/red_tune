@@ -31,17 +31,22 @@ export function PlaylistDetailPage() {
 
   useEffect(() => {
     if (!selectedPlaylistId) return;
-    const allPls = (userPlaylists && userPlaylists.length > 0) ? userPlaylists : storage.getPlaylists();
-    const pl = allPls.find(p => p.id === selectedPlaylistId);
+    const allPls = userPlaylists && userPlaylists.length > 0 ? userPlaylists : storage.getPlaylists();
+    let pl = allPls.find((p) => p.id === selectedPlaylistId);
+    if (!pl) {
+      // Check local storage directly as fallback
+      const localPls = storage.getPlaylists();
+      pl = localPls.find((p) => p.id === selectedPlaylistId);
+    }
     if (pl) {
       setPlaylist(pl);
       setEditName(pl.name);
       setEditDesc(pl.description || "");
-      if (pl.songs && pl.songs.length > 0) {
+      if (Array.isArray(pl.songs) && pl.songs.length > 0) {
         setSongs(pl.songs);
       } else {
         const songsMap = storage.getAllSongs();
-        const loadedSongs = (pl.songIds || []).map(id => songsMap[id]).filter(Boolean);
+        const loadedSongs = (pl.songIds || []).map((id) => songsMap[id]).filter(Boolean);
         setSongs(loadedSongs);
       }
     }
@@ -75,14 +80,14 @@ export function PlaylistDetailPage() {
     e.preventDefault();
     if (!editName.trim()) return;
 
+    storage.renamePlaylist(playlist.id, editName.trim(), editDesc.trim());
+
     if (api.isAuthenticated()) {
       try {
         await api.updatePlaylist(playlist.id, { name: editName.trim(), description: editDesc.trim() });
       } catch {
-        storage.renamePlaylist(playlist.id, editName.trim(), editDesc.trim());
+        // Local storage is already updated
       }
-    } else {
-      storage.renamePlaylist(playlist.id, editName.trim(), editDesc.trim());
     }
 
     soundEffects.playClick();
@@ -98,14 +103,14 @@ export function PlaylistDetailPage() {
   const handleDeletePlaylist = async () => {
     if (playlist.isSpecial) return;
     if (window.confirm(`Are you sure you want to delete "${playlist.name}"?`)) {
+      storage.deletePlaylist(playlist.id);
+
       if (api.isAuthenticated()) {
         try {
           await api.deletePlaylist(playlist.id);
         } catch {
-          storage.deletePlaylist(playlist.id);
+          // Local storage is already updated
         }
-      } else {
-        storage.deletePlaylist(playlist.id);
       }
       soundEffects.playClick();
       await refreshLibrary();
@@ -119,14 +124,14 @@ export function PlaylistDetailPage() {
   };
 
   const handleRemoveSong = async (songId) => {
+    storage.removeSongFromPlaylist(playlist.id, songId);
+
     if (api.isAuthenticated()) {
       try {
         await api.removeSongFromPlaylist(playlist.id, songId);
       } catch {
-        storage.removeSongFromPlaylist(playlist.id, songId);
+        // Local storage is already updated
       }
-    } else {
-      storage.removeSongFromPlaylist(playlist.id, songId);
     }
     soundEffects.playClick();
     await refreshLibrary();
@@ -138,16 +143,15 @@ export function PlaylistDetailPage() {
     const [removed] = reordered.splice(index, 1);
     reordered.splice(index - 1, 0, removed);
     setSongs(reordered);
-    const newSongIds = reordered.map(s => s.id);
+    const newSongIds = reordered.map((s) => s.id);
 
+    storage.reorderPlaylistSongs(playlist.id, index, index - 1);
     if (api.isAuthenticated()) {
       try {
         await api.reorderPlaylist(playlist.id, newSongIds);
       } catch {
-        storage.reorderPlaylistSongs(playlist.id, index, index - 1);
+        // Local storage is already updated
       }
-    } else {
-      storage.reorderPlaylistSongs(playlist.id, index, index - 1);
     }
     await refreshLibrary();
   };
@@ -158,16 +162,15 @@ export function PlaylistDetailPage() {
     const [removed] = reordered.splice(index, 1);
     reordered.splice(index + 1, 0, removed);
     setSongs(reordered);
-    const newSongIds = reordered.map(s => s.id);
+    const newSongIds = reordered.map((s) => s.id);
 
+    storage.reorderPlaylistSongs(playlist.id, index, index + 1);
     if (api.isAuthenticated()) {
       try {
         await api.reorderPlaylist(playlist.id, newSongIds);
       } catch {
-        storage.reorderPlaylistSongs(playlist.id, index, index + 1);
+        // Local storage is already updated
       }
-    } else {
-      storage.reorderPlaylistSongs(playlist.id, index, index + 1);
     }
     await refreshLibrary();
   };

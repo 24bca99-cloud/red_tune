@@ -331,7 +331,19 @@ class StorageService {
   getPlaylists() {
     try {
       const data = localStorage.getItem(this._key("PLAYLISTS"));
-      return data ? JSON.parse(data) : [];
+      const list = data ? JSON.parse(data) : [];
+      const allSongs = this.getAllSongs();
+      return list.map((pl) => {
+        const songs =
+          Array.isArray(pl.songs) && pl.songs.length > 0
+            ? pl.songs
+            : (pl.songIds || []).map((id) => allSongs[id]).filter(Boolean);
+        return {
+          ...pl,
+          songIds: Array.isArray(pl.songIds) ? pl.songIds : songs.map((s) => s.id),
+          songs
+        };
+      });
     } catch {
       return [];
     }
@@ -353,7 +365,9 @@ class StorageService {
       description: description.trim(),
       coverGradient: coverGradient || "linear-gradient(135deg, #171717, #36070d)",
       songIds: [],
-      createdAt: Date.now()
+      songs: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
     playlists.push(newPlaylist);
     this.savePlaylists(playlists);
@@ -366,6 +380,7 @@ class StorageService {
     if (target) {
       if (newName !== undefined) target.name = newName.trim();
       if (newDescription !== undefined) target.description = newDescription.trim();
+      target.updatedAt = Date.now();
       this.savePlaylists(playlists);
     }
   }
@@ -379,12 +394,31 @@ class StorageService {
   }
 
   addSongToPlaylist(playlistId, song) {
-    this.saveSong(song);
+    if (!song || !song.id) return;
+    const normalizedSong = {
+      ...song,
+      id: song.id,
+      youtubeVideoId:
+        song.youtubeVideoId ||
+        song.provider_song_id ||
+        (typeof song.id === "string" && song.id.startsWith("yt-") ? song.id.slice(3) : song.id),
+      thumbnail: song.thumbnail || song.artwork_url || "",
+      artwork_url: song.artwork_url || song.thumbnail || "",
+      title: song.title || "Unknown Track",
+      artist: song.artist || "Unknown Artist",
+      duration: song.duration || "3:30"
+    };
+    this.saveSong(normalizedSong);
+
     const playlists = this.getPlaylists();
     const target = playlists.find(p => p.id === playlistId);
     if (target) {
-      if (!target.songIds.includes(song.id)) {
-        target.songIds.push(song.id);
+      if (!Array.isArray(target.songIds)) target.songIds = [];
+      if (!Array.isArray(target.songs)) target.songs = [];
+      if (!target.songIds.includes(normalizedSong.id)) {
+        target.songIds.push(normalizedSong.id);
+        target.songs.push(normalizedSong);
+        target.updatedAt = Date.now();
         this.savePlaylists(playlists);
       }
     }
@@ -394,7 +428,13 @@ class StorageService {
     const playlists = this.getPlaylists();
     const target = playlists.find(p => p.id === playlistId);
     if (target) {
-      target.songIds = target.songIds.filter(id => id !== songId);
+      if (Array.isArray(target.songIds)) {
+        target.songIds = target.songIds.filter(id => id !== songId);
+      }
+      if (Array.isArray(target.songs)) {
+        target.songs = target.songs.filter(s => s.id !== songId);
+      }
+      target.updatedAt = Date.now();
       this.savePlaylists(playlists);
     }
   }
@@ -402,11 +442,20 @@ class StorageService {
   reorderPlaylistSongs(playlistId, sourceIndex, targetIndex) {
     const playlists = this.getPlaylists();
     const target = playlists.find(p => p.id === playlistId);
-    if (target && target.songIds) {
-      const updated = [...target.songIds];
-      const [removed] = updated.splice(sourceIndex, 1);
-      updated.splice(targetIndex, 0, removed);
-      target.songIds = updated;
+    if (target) {
+      if (Array.isArray(target.songIds)) {
+        const updatedIds = [...target.songIds];
+        const [removedId] = updatedIds.splice(sourceIndex, 1);
+        updatedIds.splice(targetIndex, 0, removedId);
+        target.songIds = updatedIds;
+      }
+      if (Array.isArray(target.songs)) {
+        const updatedSongs = [...target.songs];
+        const [removedSong] = updatedSongs.splice(sourceIndex, 1);
+        updatedSongs.splice(targetIndex, 0, removedSong);
+        target.songs = updatedSongs;
+      }
+      target.updatedAt = Date.now();
       this.savePlaylists(playlists);
     }
   }

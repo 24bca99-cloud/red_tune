@@ -143,6 +143,9 @@ export function PlayerProvider({ children }) {
       if (event.type === "READY") {
         ytPlayerRef.current = youtubeAudioEngine.player;
       } else if (event.type === "STATE_CHANGE") {
+        console.log(
+          `[RedTune Diagnostic: PlayerContext] STATE_CHANGE received: ${event.state} | activeSong: "${currentSongRef.current?.title || "none"}"`
+        );
         if (event.state === "PLAYING") {
           setIsPlaying(true);
           setPlayerState("PLAYING");
@@ -151,6 +154,9 @@ export function PlayerProvider({ children }) {
           setIsPlaying(false);
           setPlayerState("PAUSED");
           soundEffects.setMediaPlaying(false);
+          if (typeof event.pausedAt === "number" && event.pausedAt >= 0) {
+            setProgress(event.pausedAt);
+          }
         } else if (event.state === "BUFFERING") {
           setPlayerState("BUFFERING");
         } else if (event.state === "ENDED") {
@@ -161,7 +167,7 @@ export function PlayerProvider({ children }) {
           }
         }
       } else if (event.type === "ERROR") {
-        console.warn("YouTube Audio Engine error event. Advancing track...");
+        console.warn("[RedTune Diagnostic: PlayerContext] Engine error event. Advancing track...", event.code);
         if (typeof playNextRef.current === "function") {
           playNextRef.current(true);
         }
@@ -239,7 +245,12 @@ export function PlayerProvider({ children }) {
     setIsPlaying(true);
     soundEffects.setMediaPlaying(true);
 
-    youtubeAudioEngine.loadAndPlay(song.youtubeVideoId, 0);
+    const videoId =
+      song.youtubeVideoId ||
+      song.provider_song_id ||
+      (typeof song.id === "string" && song.id.startsWith("yt-") ? song.id.slice(3) : song.id);
+
+    youtubeAudioEngine.loadAndPlay(videoId, 0);
   }, [finalizeCurrentSongStats]);
 
   /**

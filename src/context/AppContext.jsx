@@ -27,7 +27,7 @@ export function AppProvider({ children }) {
   // User-specific data
   const [settings, setSettingsState] = useState(() => storage.getSettings());
   const [favorites, setFavorites] = useState(() => storage.getFavorites());
-  const [userPlaylists, setUserPlaylists] = useState([]);
+  const [userPlaylists, setUserPlaylists] = useState(() => storage.getPlaylists());
   const [preferences, setPreferences] = useState(() => storage.getPreferences());
   const [searchHistory, setSearchHistory] = useState(() => storage.getSearchHistory());
   const [followedArtists, setFollowedArtists] = useState(() => storage.getFollowedArtists());
@@ -70,8 +70,12 @@ export function AppProvider({ children }) {
         }
 
         if (Array.isArray(backendPlaylists)) {
-          setUserPlaylists(backendPlaylists);
-          localStorage.setItem(storage._key("PLAYLISTS"), JSON.stringify(backendPlaylists));
+          if (backendPlaylists.length > 0) {
+            setUserPlaylists(backendPlaylists);
+            storage.savePlaylists(backendPlaylists);
+          } else {
+            setUserPlaylists(storage.getPlaylists());
+          }
         }
 
         if (backendSettings) {
@@ -419,17 +423,8 @@ export function AppProvider({ children }) {
     return updated;
   };
 
-  // Add song to playlist helper
+  // Add song to playlist helper (allows both guest and authenticated users)
   const openAddToPlaylist = (song) => {
-    if (!api.isAuthenticated()) {
-      showToast({
-        title: "Sign in required",
-        message: "Please log in to add songs to playlists.",
-        type: "info"
-      });
-      openAuthModal("login");
-      return;
-    }
     soundEffects.playClick();
     setSongToAddToPlaylist(song);
   };
@@ -439,13 +434,23 @@ export function AppProvider({ children }) {
   };
 
   const refreshLibrary = async () => {
-    if (currentUser) {
-      await syncUserData(currentUser);
+    if (currentUser && api.isAuthenticated()) {
+      try {
+        const backendPlaylists = await api.getPlaylists();
+        if (Array.isArray(backendPlaylists) && backendPlaylists.length > 0) {
+          setUserPlaylists(backendPlaylists);
+          storage.savePlaylists(backendPlaylists);
+        } else {
+          setUserPlaylists(storage.getPlaylists());
+        }
+      } catch {
+        setUserPlaylists(storage.getPlaylists());
+      }
     } else {
-      setFavorites(storage.getFavorites());
       setUserPlaylists(storage.getPlaylists());
-      setLibraryVersion(v => v + 1);
     }
+    setFavorites(storage.getFavorites());
+    setLibraryVersion(v => v + 1);
   };
 
   return (

@@ -28,19 +28,22 @@ export function CreatePlaylistModal() {
     if (!name.trim()) return;
 
     setLoading(true);
-    let newPlaylist;
-    try {
-      if (api.isAuthenticated()) {
+    let newPlaylist = storage.createPlaylist(name.trim(), description.trim(), selectedGradient);
+
+    if (api.isAuthenticated()) {
+      try {
         const res = await api.createPlaylist(name.trim(), description.trim(), selectedGradient);
-        newPlaylist = res.playlist;
-      } else {
-        newPlaylist = storage.createPlaylist(name.trim(), description.trim(), selectedGradient);
+        if (res?.playlist) {
+          // Sync backend playlist object with local storage
+          const allLocal = storage.getPlaylists().filter((p) => p.id !== newPlaylist.id);
+          newPlaylist = res.playlist;
+          storage.savePlaylists([newPlaylist, ...allLocal]);
+        }
+      } catch {
+        // Local storage already has the created playlist
       }
-    } catch {
-      newPlaylist = storage.createPlaylist(name.trim(), description.trim(), selectedGradient);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
 
     soundEffects.playAddPlaylist();
     showToast({

@@ -21,27 +21,30 @@ class YouTubeAudioEngine {
     this.listeners = new Set();
     this.isScriptLoading = false;
     this.initialized = false;
-    this.audioKeeper = null;
 
     if (typeof window !== "undefined") {
-      try {
-        // Silent carrier audio loop to keep mobile OS audio session active in background
-        this.audioKeeper = new Audio();
-        this.audioKeeper.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-        this.audioKeeper.loop = true;
-        this.audioKeeper.volume = 0.01;
-        this.audioKeeper.setAttribute("playsinline", "true");
-        this.audioKeeper.setAttribute("webkit-playsinline", "true");
-      } catch {}
-
-      // Visibility change handler: auto-resume if device was locked/backgrounded
+      // Visibility change handler: resume and restore unmuted audio when returning to app
       document.addEventListener("visibilitychange", () => {
+        const pState = this.player && typeof this.player.getPlayerState === "function" ? this.player.getPlayerState() : -1;
+        console.log(
+          `[RedTune Diagnostic] visibilitychange: visibilityState = ${document.visibilityState} | playerState = ${pState} | isUserPlaying = ${this.isUserPlaying} | curTime = ${this.getCurrentTime().toFixed(1)}s`
+        );
         if (document.visibilityState === "visible") {
           if (this.isUserPlaying && this.player && typeof this.player.getPlayerState === "function") {
-            const state = this.player.getPlayerState();
-            if (state !== window.YT?.PlayerState?.PLAYING) {
+            if (pState !== window.YT?.PlayerState?.PLAYING) {
+              console.log("[RedTune Diagnostic] visibilitychange: Attempting auto-resume of paused track on tab return");
               this.play();
             }
+          }
+          if (this.player && !this.savedMuted) {
+            try {
+              if (typeof this.player.isMuted === "function" && this.player.isMuted()) {
+                this.player.unMute();
+              }
+              if (typeof this.player.setVolume === "function") {
+                this.player.setVolume(this.savedVolume);
+              }
+            } catch {}
           }
         }
       });
@@ -106,9 +109,17 @@ class YouTubeAudioEngine {
         events: {
           onReady: (event) => {
             this.isReady = true;
+            console.log(
+              "[RedTune Diagnostic] YT.Player onReady fired. DOM iframe present:",
+              Boolean(document.getElementById("redtune-yt-player-element") || document.querySelector("#redtune-persistent-player-anchor iframe"))
+            );
             try {
-              event.target.setVolume(this.savedVolume);
-              if (this.savedMuted) event.target.mute();
+              if (this.savedMuted) {
+                event.target.mute();
+              } else {
+                event.target.unMute();
+                event.target.setVolume(this.savedVolume);
+              }
             } catch {}
 
             // Process any pending action that arrived before onReady
@@ -127,32 +138,52 @@ class YouTubeAudioEngine {
             if (state === window.YT.PlayerState.PLAYING) {
               this.isLoadingTrack = false;
               this.isUserPlaying = true;
+              console.log(
+                `[RedTune Diagnostic] onStateChange: PLAYING (1) | videoId: ${this.currentVideoId} | time: ${this.getCurrentTime().toFixed(1)}s | hidden: ${document.hidden}`
+              );
+
+              // Ensure player did not get auto-muted or zero-volumed by browser
+              try {
+                if (typeof this.player.isMuted === "function" && this.player.isMuted() && !this.savedMuted) {
+                  this.player.unMute();
+                }
+                if (typeof this.player.getVolume === "function") {
+                  const curVol = this.player.getVolume();
+                  if (curVol === 0 && this.savedVolume > 0 && !this.savedMuted) {
+                    this.player.setVolume(this.savedVolume);
+                  }
+                }
+              } catch {}
+
               this.notify({ type: "STATE_CHANGE", state: "PLAYING", isPlaying: true });
             } else if (state === window.YT.PlayerState.PAUSED) {
-              // Ignore temporary pause during track transition or load
+              const curTime = this.getCurrentTime();
+              const isHidden = typeof document !== "undefined" && document.hidden;
+              console.log(
+                `[RedTune Diagnostic] onStateChange: PAUSED (2) | videoId: ${this.currentVideoId} | time: ${curTime.toFixed(1)}s | hidden: ${isHidden} | volume: ${this.player?.getVolume?.()} | muted: ${this.player?.isMuted?.()}`
+              );
+
               if (this.isLoadingTrack) {
                 return;
               }
 
-              // On mobile: if document is hidden (screen locked or browser minimized) and user wants to play,
-              // don't immediately destroy the session; attempt to keep playing via mediaSession
-              if (typeof document !== "undefined" && document.visibilityState === "hidden" && this.isUserPlaying) {
-                try {
-                  this.player.playVideo();
-                } catch {}
-                return;
-              }
-
-              this.notify({ type: "STATE_CHANGE", state: "PAUSED", isPlaying: false });
+              // Notify paused state so UI and audio remain synchronized
+              this.notify({ type: "STATE_CHANGE", state: "PAUSED", isPlaying: false, pausedAt: curTime });
             } else if (state === window.YT.PlayerState.BUFFERING) {
+              console.log(
+                `[RedTune Diagnostic] onStateChange: BUFFERING (3) | videoId: ${this.currentVideoId} | hidden: ${document.hidden}`
+              );
               this.notify({ type: "STATE_CHANGE", state: "BUFFERING" });
             } else if (state === window.YT.PlayerState.ENDED) {
+              console.log(
+                `[RedTune Diagnostic] onStateChange: ENDED (0) | videoId: ${this.currentVideoId}`
+              );
               this.isLoadingTrack = false;
               this.notify({ type: "STATE_CHANGE", state: "ENDED", autoAdvance: true });
             }
           },
           onError: (event) => {
-            console.warn("YouTube Audio Engine notice (error code):", event.data);
+            console.warn("[RedTune Diagnostic] YouTube player error code:", event.data);
             this.isLoadingTrack = false;
             this.notify({ type: "ERROR", code: event.data });
           }
@@ -165,14 +196,12 @@ class YouTubeAudioEngine {
 
   loadAndPlay(videoId, startSeconds = 0) {
     if (!videoId) return;
+    console.log(
+      `[RedTune Diagnostic] loadAndPlay called | newVideoId: ${videoId} | prevVideoId: ${this.currentVideoId} | startSeconds: ${startSeconds}`
+    );
     this.isUserPlaying = true;
     this.isLoadingTrack = true;
     this.currentVideoId = videoId;
-
-    // Activate mobile background audio session keeper on user gesture
-    if (this.audioKeeper) {
-      this.audioKeeper.play().catch(() => {});
-    }
 
     if (!this.isReady || !this.player || typeof this.player.loadVideoById !== "function") {
       this.pendingAction = { action: "loadAndPlay", videoId, startSeconds };
@@ -184,6 +213,14 @@ class YouTubeAudioEngine {
         videoId,
         startSeconds: startSeconds || 0
       });
+
+      // Maintain user's volume and mute preferences on track change
+      if (this.savedMuted) {
+        if (typeof this.player.mute === "function") this.player.mute();
+      } else {
+        if (typeof this.player.unMute === "function") this.player.unMute();
+        if (typeof this.player.setVolume === "function") this.player.setVolume(this.savedVolume);
+      }
     } catch (err) {
       console.warn("YouTubeAudioEngine: Error calling loadVideoById:", err);
     }
@@ -191,12 +228,13 @@ class YouTubeAudioEngine {
 
   play() {
     this.isUserPlaying = true;
-    if (this.audioKeeper) {
-      this.audioKeeper.play().catch(() => {});
-    }
 
     if (this.isReady && this.player && typeof this.player.playVideo === "function") {
       try {
+        if (!this.savedMuted) {
+          if (typeof this.player.unMute === "function") this.player.unMute();
+          if (typeof this.player.setVolume === "function") this.player.setVolume(this.savedVolume);
+        }
         const state = typeof this.player.getPlayerState === "function" ? this.player.getPlayerState() : -1;
         if (state !== window.YT?.PlayerState?.PLAYING) {
           this.player.playVideo();
@@ -210,9 +248,6 @@ class YouTubeAudioEngine {
   pause() {
     this.isUserPlaying = false;
     this.isLoadingTrack = false;
-    if (this.audioKeeper) {
-      this.audioKeeper.pause();
-    }
 
     if (this.isReady && this.player && typeof this.player.pauseVideo === "function") {
       try {

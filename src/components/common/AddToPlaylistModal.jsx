@@ -13,20 +13,22 @@ export function AddToPlaylistModal() {
 
   if (!songToAddToPlaylist) return null;
 
-  const rawPlaylists = (userPlaylists && userPlaylists.length > 0) ? userPlaylists : storage.getPlaylists();
-  const playlists = rawPlaylists.filter(p => !p.isSpecial); // Exclude favorites which is handled by heart
+  const rawPlaylists = userPlaylists && userPlaylists.length > 0 ? userPlaylists : storage.getPlaylists();
+  const playlists = rawPlaylists.filter((p) => !p.isSpecial); // Exclude favorites which is handled by heart
 
   const handleToggleSongInPlaylist = async (playlist) => {
-    const isAlreadyIn = (playlist.songIds || []).includes(songToAddToPlaylist.id);
+    const isAlreadyIn =
+      (playlist.songIds || []).includes(songToAddToPlaylist.id) ||
+      (playlist.songs || []).some((s) => s.id === songToAddToPlaylist.id);
+
     if (isAlreadyIn) {
+      storage.removeSongFromPlaylist(playlist.id, songToAddToPlaylist.id);
       if (api.isAuthenticated()) {
         try {
           await api.removeSongFromPlaylist(playlist.id, songToAddToPlaylist.id);
         } catch {
-          storage.removeSongFromPlaylist(playlist.id, songToAddToPlaylist.id);
+          // Local storage is already updated
         }
-      } else {
-        storage.removeSongFromPlaylist(playlist.id, songToAddToPlaylist.id);
       }
       soundEffects.playClick();
       showToast({
@@ -35,14 +37,13 @@ export function AddToPlaylistModal() {
         type: "info"
       });
     } else {
+      storage.addSongToPlaylist(playlist.id, songToAddToPlaylist);
       if (api.isAuthenticated()) {
         try {
           await api.addSongToPlaylist(playlist.id, songToAddToPlaylist);
         } catch {
-          storage.addSongToPlaylist(playlist.id, songToAddToPlaylist);
+          // Local storage is already updated
         }
-      } else {
-        storage.addSongToPlaylist(playlist.id, songToAddToPlaylist);
       }
       soundEffects.playAddPlaylist();
       showToast({
@@ -58,19 +59,18 @@ export function AddToPlaylistModal() {
     e.preventDefault();
     if (!createdName.trim()) return;
 
+    const newPl = storage.createPlaylist(createdName.trim());
+    storage.addSongToPlaylist(newPl.id, songToAddToPlaylist);
+
     if (api.isAuthenticated()) {
       try {
         const res = await api.createPlaylist(createdName.trim());
-        if (res.playlist) {
+        if (res?.playlist?.id) {
           await api.addSongToPlaylist(res.playlist.id, songToAddToPlaylist);
         }
       } catch {
-        const newPl = storage.createPlaylist(createdName.trim());
-        storage.addSongToPlaylist(newPl.id, songToAddToPlaylist);
+        // Local storage is already updated
       }
-    } else {
-      const newPl = storage.createPlaylist(createdName.trim());
-      storage.addSongToPlaylist(newPl.id, songToAddToPlaylist);
     }
 
     soundEffects.playAddPlaylist();
