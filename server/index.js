@@ -20,6 +20,22 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Serverless URL normalization middleware for Vercel compatibility
+app.use((req, res, next) => {
+  const matchedPath = req.headers['x-matched-path'];
+  if (matchedPath && matchedPath.startsWith('/api')) {
+    req.url = matchedPath;
+  } else if (!req.url.startsWith('/api')) {
+    req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
+  }
+  next();
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', name: 'RedTune API', timestamp: Date.now() });
+});
+
 // YouTube Search API route
 app.get('/api/youtube/search', searchYouTube);
 
