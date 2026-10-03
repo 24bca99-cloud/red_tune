@@ -1,12 +1,17 @@
 /**
  * RedTune Web Audio API Sound Synthesizer
- * Original, zero-copyright, ultra-lightweight micro-sound effects
+ * Original, zero-copyright, ultra-lightweight micro-sound effects.
+ * 
+ * Safe Audio Architecture:
+ * - Tab switching is completely silent to avoid interrupting mobile audio sessions.
+ * - Suppressed whenever media playback is active to prevent competing with music streams.
  */
 
 class SoundEffectsService {
   constructor() {
     this.audioCtx = null;
     this.enabled = true;
+    this.mediaPlaying = false;
     this.masterGain = 0.25; // Subtle and pleasant volume
   }
 
@@ -26,8 +31,13 @@ class SoundEffectsService {
     this.enabled = Boolean(val);
   }
 
+  setMediaPlaying(isPlaying) {
+    this.mediaPlaying = Boolean(isPlaying);
+  }
+
   playClick() {
-    if (!this.enabled) return;
+    // Suppress Web Audio output when media is playing to preserve mobile audio session
+    if (!this.enabled || this.mediaPlaying) return;
     try {
       this.init();
       if (!this.audioCtx) return;
@@ -53,33 +63,12 @@ class SoundEffectsService {
   }
 
   playTabSwitch() {
-    if (!this.enabled) return;
-    try {
-      this.init();
-      if (!this.audioCtx) return;
-      const ctx = this.audioCtx;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(360, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.04);
-
-      gain.gain.setValueAtTime(this.masterGain * 0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.045);
-    } catch {
-      // Ignore
-    }
+    // Intentionally silent: Tab switching in a music player must never acquire
+    // device audio focus or interrupt active music playback.
   }
 
   playPlay() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.mediaPlaying) return;
     try {
       this.init();
       if (!this.audioCtx) return;
@@ -108,7 +97,7 @@ class SoundEffectsService {
   }
 
   playPause() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.mediaPlaying) return;
     try {
       this.init();
       if (!this.audioCtx) return;
@@ -137,7 +126,7 @@ class SoundEffectsService {
   }
 
   playFavorite() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.mediaPlaying) return;
     try {
       this.init();
       if (!this.audioCtx) return;
@@ -170,7 +159,7 @@ class SoundEffectsService {
   }
 
   playAddPlaylist() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.mediaPlaying) return;
     try {
       this.init();
       if (!this.audioCtx) return;

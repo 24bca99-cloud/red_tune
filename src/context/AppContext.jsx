@@ -161,7 +161,6 @@ export function AppProvider({ children }) {
 
   // Navigation handler
   const navigateTo = (tab, playlistId = null) => {
-    soundEffects.playTabSwitch();
     setActiveTab(tab);
     if (playlistId) {
       setSelectedPlaylistId(playlistId);
@@ -175,7 +174,6 @@ export function AppProvider({ children }) {
   // Artist Navigation handler
   const navigateToArtist = (artistName) => {
     if (!artistName) return;
-    soundEffects.playTabSwitch();
     setSelectedArtist(artistName);
     setActiveTab("artist");
     const mainEl = document.getElementById("redtune-main-scroll");
