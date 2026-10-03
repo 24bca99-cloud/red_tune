@@ -1,6 +1,6 @@
 import React from "react";
 import { useApp } from "../../context/AppContext";
-import { Home, Search, Library, Heart, User, Settings } from "lucide-react";
+import { Home, Search, Library, Heart, User } from "lucide-react";
 
 export function MobileNav() {
   const { activeTab, navigateTo } = useApp();
@@ -25,9 +25,10 @@ export function MobileNav() {
               onClick={() => navigateTo(item.id)}
               className={`mobile-nav-btn ${isActive ? "active" : ""}`}
               aria-current={isActive ? "page" : undefined}
+              aria-label={item.label}
             >
               <div className="icon-wrapper">
-                <Icon size={20} />
+                <Icon size={21} />
                 {isActive && <span className="mobile-active-glow" />}
               </div>
               <span className="mobile-nav-label">{item.label}</span>

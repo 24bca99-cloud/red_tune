@@ -17,6 +17,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Global Persistent YouTube Audio Player Bridge (Isolated from React reconciliation) -->
+    <div
+      id="redtune-persistent-player-anchor"
+      aria-hidden="true"
+      style="position: fixed; bottom: 0; right: 0; width: 1px; height: 1px; opacity: 0.001; pointer-events: none; z-index: -9999; overflow: hidden;"
+    >
+      <div id="redtune-yt-player-element"></div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

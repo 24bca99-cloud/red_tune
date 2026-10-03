@@ -210,7 +210,8 @@ const KEYS = {
   SETTINGS: "redtune_user_settings_db",
   PREFERENCES: "redtune_preferences_db",
   SEARCH_HISTORY: "redtune_search_history_db",
-  FOLLOWED_ARTISTS: "redtune_followed_artists_db"
+  FOLLOWED_ARTISTS: "redtune_followed_artists_db",
+  PLAYBACK_STATE: "redtune_playback_state_db"
 };
 
 const DEFAULT_SETTINGS = {
@@ -608,6 +609,25 @@ class StorageService {
       return !isFollowing;
     } catch {
       return false;
+    }
+  }
+
+  // --- PLAYBACK STATE ---
+  getPlaybackState() {
+    try {
+      const data = localStorage.getItem(this._key("PLAYBACK_STATE"));
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  savePlaybackState(playbackState) {
+    if (!playbackState) return;
+    try {
+      localStorage.setItem(this._key("PLAYBACK_STATE"), JSON.stringify(playbackState));
+    } catch {
+      // ignore
     }
   }
 
